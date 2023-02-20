@@ -20,6 +20,24 @@ from openant.devices.heart_rate import (
 WHEEL_CIRCUMFERENCE_M = 2.3
 
 
+def get_device_listener(device_id=0):
+    node = Node()
+    node.set_network_key(0x00, ANTPLUS_NETWORK_KEY)
+
+    device = HeartRate(node, device_id=device_id)
+
+    def on_found():
+        print(f"Device {device} found and receiving")
+
+    def on_device_data(page: int, page_name: str, data):
+        if isinstance(data, HeartRateData):
+            print(f"HR: {data.heart_rate}", flush=True)
+            
+
+    device.on_found = on_found
+    device.on_device_data = on_device_data
+    return node
+
 def main(device_id=0):
     # import logging
     # logging.basicConfig(level=logging.DEBUG)
@@ -27,23 +45,12 @@ def main(device_id=0):
     node = Node()
     node.set_network_key(0x00, ANTPLUS_NETWORK_KEY)
 
-    # device = BikeSpeed(node, device_id=device_id)
-    # device = BikeCadence(node, device_id=device_id)
-    # device = BikeSpeedCadence(node, device_id=device_id)
     device = HeartRate(node, device_id=device_id)
 
     def on_found():
         print(f"Device {device} found and receiving")
 
     def on_device_data(page: int, page_name: str, data):
-        # if isinstance(data, BikeCadenceData):
-        #     cadence = data.cadence
-        #     if cadence:
-        #         print(f"cadence: {cadence:.2f} rpm")
-        # elif isinstance(data, BikeSpeedData):
-        #     speed = data.calculate_speed(WHEEL_CIRCUMFERENCE_M)
-        #     if speed:
-        #         print(f"speed: {speed:.2f} km/h")
         if isinstance(data, HeartRateData):
             print(f"HR: {data.heart_rate}", flush=True)
             

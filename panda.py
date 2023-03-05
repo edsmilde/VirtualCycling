@@ -11,6 +11,7 @@ class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
 
+
         # Disable the camera trackball controls.
         self.disableMouse()
 

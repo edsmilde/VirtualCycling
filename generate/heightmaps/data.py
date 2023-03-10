@@ -57,8 +57,8 @@ def generate_hilly_terrain(height, width, variance=0, corners=(MID_DEPTH, MID_DE
     return data
 
 
-my_data = generate_hilly_terrain(SIDE_LENGTH, SIDE_LENGTH, variance=MAX_DEPTH//4, corners=(MAX_DEPTH//2, MAX_DEPTH//2, MAX_DEPTH//2, MAX_DEPTH//2))
+# my_data = generate_hilly_terrain(SIDE_LENGTH, SIDE_LENGTH, variance=MAX_DEPTH//4, corners=(MAX_DEPTH//2, MAX_DEPTH//2, MAX_DEPTH//2, MAX_DEPTH//2))
 
-image = Image.fromarray(my_data, mode='I;16')
+# image = Image.fromarray(my_data, mode='I;16')
 
-image.save('height_257.png')
+# image.save('height_257.png')

@@ -1,51 +1,45 @@
 from math import sin, cos, pi
+import random
 
 import numpy
 
 from heightmaps.data import generate_hilly_terrain
-from heightmaps.png import write_png
+from heightmaps.png import write_heightmap_png
+
+from textures.png import write_route_png
 
 
-HEIGHTMAPS_PATH = './assets/heightmaps/'
+ASSETS_PATH = './assets'
+HEIGHTMAPS_PATH = f'{ASSETS_PATH}/heightmaps'
+TEXTURES_PATH = f'{ASSETS_PATH}/textures'
+ROUTES_PATH = f'{ASSETS_PATH}/routes'
 
 
-def get_rounded_square_route_points(size):
-    left = size*0.2
-    right = size*0.8
-    top = size*0.8
-    bottom = size*0.2
-    turn_radius = size*0.1
-    point_space = size*0.1
-    points = []
-    # top points
-    for i in range((right - left - 2*turn_radius) // point_space):
-        points.append(left + turn_radius + i * point_space, top)
-    # top-right points
-    for i in range((turn_radius*pi/2)//point_space):
-        theta = i * point_space / turn_radius
-        points.append(right - turn_radius + turn_radius * sin(theta), top - turn_radius * (1-cos(theta)))
-    # right points
-    for i in range((top - bottom - 2*turn_radius) // point_space):
-        points.append(right, top - turn_radius - i * point_space)
-    # bottom-right points
-    for i in range((turn_radius*pi/2)//point_space):
-        theta = i * point_space / turn_radius
-        points.append(right - turn_radius * (1-cos(theta)), bottom + turn_radius - turn_radius * sin(theta))
-    # bottom points
-    for i in range((right - left - 2*turn_radius) // point_space):
-        points.append(right - turn_radius - i * point_space, bottom)
-    # bottom-left points
-    for i in range((turn_radius*pi/2)//point_space):
-        theta = i * point_space / turn_radius
-        points.append(left + turn_radius - turn_radius * sin(theta), bottom + turn_radius * (1-cos(theta)))
-    # left points
-    for i in range((top - bottom - 2*turn_radius) // point_space):
-        points.append(left, bottom + turn_radius + i * point_space)
-    # top-left points
-    for i in range((turn_radius*pi/2)//point_space):
-        theta = i * point_space / turn_radius
-        points.append(left + turn_radius * (1-cos(theta)), top - turn_radius + turn_radius * sin(theta))
-    return points
+def round(x):
+    return int(x+0.5)
+
+
+def get_height_rounded(heightmap, point):
+    x, y = point
+    x_int = round(x+0.5)
+    y_int = round(y+0.5)
+    return heightmap[y_int][x_int]
+
+
+def point_or_bound(point, heightmap, padding=0):
+    height = len(heightmap)
+    width = len(heightmap[0])
+    x, y = point
+    if x < padding:
+        x = padding
+    elif x > width-1-padding:
+        x = width-1-padding
+    if y < padding:
+        y = padding
+    elif y > height-1-padding:
+        y = height-1-padding
+    return x, y
+
 
 
 def get_normal(point_1, point_2):
@@ -60,54 +54,108 @@ def get_normal_vector(point_1, point_2):
     x1, y1 = point_1
     x2, y2 = point_2
     dy = y2 - y1
-    dx = x2 - x2
+    dx = x2 - x1
     magnitude = (dy**2 + dx**2)**0.5
-    return dy/magnitude, -dx/magnitude
+    if magnitude == 0:
+        return 0, 0
+    else:
+        return dy/magnitude, -dx/magnitude
 
 
 def get_slope_vector(point, heightmap):
     x, y = point
-    left = heightmap[x-1][y]
-    right = heightmap[x+1][y]
-    top = heightmap[x][y-1]
-    bottom = heightmap[x][y+1]
+    left = get_height_rounded(heightmap, (x-1, y))
+    right = get_height_rounded(heightmap, (x+1, y))
+    top = get_height_rounded(heightmap, (x, y+1))
+    bottom = get_height_rounded(heightmap, (x, y-1))
     return (right-left)/2, (top-bottom)/2
 
 
-def refine_route(heightmap, route_points):
-    # get average elevation
-    # elevation_sum = 0
-    # for point in route_points:
-    #     elevation_sum += heightmap[point[0]][point[1]]
-    # elevation_average = elevation_sum / len(route_points)
-    num_points = len(route_points)
-    new_route_points = []
-    move_distance = 5
-    for i in range(num_points):
-        last_point = route_points[i-1 % num_points]
-        next_point = route_points[i+1 % num_points]
-        point = route_points[i]
-        last_elevation = heightmap[last_point[0]][last_point[1]]
-        next_elevation = heightmap[next_point[0]][next_point[1]]
-        point_elevation = heightmap[point[0]][point[1]]
-        if last_elevation > point_elevation and next_elevation > point_elevation:
-            normal_vector = get_normal_vector(last_point, next_point)
-            slope = get_slope_vector(point, heightmap)
+def normalize_vector(vector):
+    x, y = vector
+    magnitude = (x**2 + y**2)**0.5
+    return x/magnitude, y/magnitude
+
+
+def get_distance(point1, point2):
+    x1, y1 = point1
+    x2, y2 = point2
+    return ((x2-x1)**2 + (y2-y1)**2)**0.5
+
+
+def get_midpoint(point1, point2):
+    x1, y1 = point1
+    x2, y2 = point2
+    return (x1+x2)/2, (y1+y2)/2
 
 
 
 
 
 
-def create_map(name, size):
-    heightmap = generate_hilly_terrain(size, size, variance=256*128//4, corners=(256*128//2, 256*128//2, 256*128//2, 256*128//2))
-    write_png(HEIGHTMAPS_PATH + name + '.png', heightmap)
+INNER_DISTANCE = 0.2
+RAND_MULTIPLE = 0.2
+RAND_NUM_PLACEMENTS = 5
 
-    route = get_rounded_square_route_points(size)
+def get_loop_route(heightmap, iterations=5):
+    side_length = len(heightmap)
+
+    points = []
+    # Corners
+    left = INNER_DISTANCE*side_length
+    right = (1-INNER_DISTANCE)*side_length
+    top = (1-INNER_DISTANCE)*side_length
+    bottom = INNER_DISTANCE*side_length
+    points.append((left, bottom))
+    points.append((right, bottom))
+    points.append((right, top))
+    points.append((left, top))
+
+    for i in range(iterations):
+        new_points = []
+        for j in range(len(points)):
+            point = points[j]
+            next_point = points[(j+1) % len(points)]
+            midpoint = get_midpoint(point, next_point)
+            normal = get_normal_vector(point, next_point)
+            distance = get_distance(point, next_point)
+            best_new_point = None
+            height_diff = None
+            mid_height = (get_height_rounded(heightmap, point) + get_height_rounded(heightmap, next_point)) / 2
+            for i in range(RAND_NUM_PLACEMENTS):
+                new_rand_placement = (random.random() - 0.5) * 2 * distance * RAND_MULTIPLE
+                new_point = (midpoint[0] + normal[0] * new_rand_placement, midpoint[1] + normal[1] * new_rand_placement)
+                new_height = get_height_rounded(heightmap, new_point)
+                new_height_diff = abs(new_height - mid_height)
+                if height_diff is None or new_height_diff < height_diff:
+                    best_new_point = new_point
+                    height_diff = new_height_diff
+            new_points.append(point)
+            new_points.append(best_new_point)
+        points = new_points.copy()
 
 
-    numpy.savetxt(HEIGHTMAPS_PATH + name + '.txt', heightmap, fmt='%d')
+
+    return points
+
+
+
+def create_map(name, side_length):
+    heightmap = generate_hilly_terrain(side_length, side_length, variance=256*128//4, corners=(256*128//2, 256*128//2, 256*128//2, 256*128//2))
+    write_heightmap_png(f'{HEIGHTMAPS_PATH}/{name}.png', heightmap)
+
+    route = get_loop_route(heightmap, iterations=6)
+
+    write_route_png(f'{TEXTURES_PATH}/{name}.png', route, side_length, resolution=20)
+
+
+    numpy.savetxt(f'{HEIGHTMAPS_PATH}/{name}.txt', heightmap, fmt='%d')
+
+    with open(f'{ROUTES_PATH}/{name}.txt', 'w') as route_file:
+        numpy.savetxt(route_file, route, fmt='%f')
 
 
 create_map('route1', 257)
+# create_map('route2', 513)
+# create_map('route3', 1025)
 

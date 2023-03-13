@@ -6,7 +6,7 @@ import numpy
 from heightmaps.data import generate_hilly_terrain
 from heightmaps.png import write_heightmap_png
 
-from textures.png import write_route_png
+from textures.png import write_route_png, write_route_arc_png
 
 
 ASSETS_PATH = './assets'
@@ -140,13 +140,14 @@ def get_loop_route(heightmap, iterations=5):
 
 
 
-def create_map(name, side_length):
+def create_map(name, side_length, iterations=4):
     heightmap = generate_hilly_terrain(side_length, side_length, variance=256*128//4, corners=(256*128//2, 256*128//2, 256*128//2, 256*128//2))
     write_heightmap_png(f'{HEIGHTMAPS_PATH}/{name}.png', heightmap)
 
-    route = get_loop_route(heightmap, iterations=6)
+    route = get_loop_route(heightmap, iterations=iterations)
 
-    write_route_png(f'{TEXTURES_PATH}/{name}.png', route, side_length, resolution=20)
+    # write_route_png(f'{TEXTURES_PATH}/{name}.png', route, side_length, resolution=20)
+    write_route_arc_png(f'{TEXTURES_PATH}/{name}.png', route, side_length, resolution=20)
 
 
     numpy.savetxt(f'{HEIGHTMAPS_PATH}/{name}.txt', heightmap, fmt='%d')
@@ -155,7 +156,7 @@ def create_map(name, side_length):
         numpy.savetxt(route_file, route, fmt='%f')
 
 
-create_map('route1', 257)
-# create_map('route2', 513)
-# create_map('route3', 1025)
+create_map('map1', 257, iterations=4)
+create_map('map2', 513, iterations=5)
+create_map('map3', 1025, iterations=6)
 

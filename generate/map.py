@@ -8,7 +8,7 @@ from generate.heightmaps.png import write_heightmap_png
 
 from generate.textures.png import write_route_png, write_route_arc_png
 
-from tools.route import get_route_points, round_corners_route_points
+from tools.route import get_route_points, round_corners_route_points, RouteReader
 
 
 
@@ -33,7 +33,6 @@ RAND_NUM_PLACEMENTS = 5
 
 def create_map(name, side_length, iterations=4):
     heightmap = generate_hilly_terrain(side_length, side_length, variance=256*128//4, corners=(256*128//2, 256*128//2, 256*128//2, 256*128//2))
-    write_heightmap_png(f'{HEIGHTMAPS_PATH}/{name}.png', heightmap)
 
     route_bottom_left = (INNER_DISTANCE*side_length, INNER_DISTANCE*side_length)
     route_top_right = ((1-INNER_DISTANCE)*side_length, (1-INNER_DISTANCE)*side_length)
@@ -42,9 +41,10 @@ def create_map(name, side_length, iterations=4):
     route_init_points = [route_bottom_left, route_bottom_right, route_top_right, route_top_left]
     init_route = get_route_points(heightmap, iterations=iterations, init_points=route_init_points)
     route = round_corners_route_points(init_route, curve_ratio=0.2, curve_segments=10)
-
-    # write_route_png(f'{TEXTURES_PATH}/{name}.png', route, side_length, resolution=20)
-    # write_route_arc_png(f'{TEXTURES_PATH}/{name}.png', route, side_length, resolution=20)
+    route_reader = RouteReader(vert_scale=60, heightmap_data=heightmap, points_data=route)
+    route_reader.flatten_heightmap_around_path()
+    # heightmap = route_reader.heightmap
+    write_heightmap_png(f'{HEIGHTMAPS_PATH}/{name}.png', heightmap)
     write_route_png(f'{TEXTURES_PATH}/{name}.png', route, side_length, resolution=20)
 
 

@@ -112,22 +112,22 @@ HEIGHTMAP_RANGE = 65535
 
 class RouteReader():
     def __init__(self, vert_scale=60, heightmap_data=None, heightmap_file=None, points_data=None, points_file=None):
-        if points_data:
+        if points_data is not None:
             self.points = points_data
         elif points_file:
             self.points = read_route_points(points_file)
         else:
             raise ValueError("Must provide either points or file")
-        if heightmap_data:
+        if heightmap_data is not None:
             self.heightmap = heightmap_data
         elif heightmap_file:
             self.heightmap = read_heightmap(heightmap_file)
         else:
             raise ValueError("Must provide either heightmap or file")
         self.vert_scale = vert_scale
-        self.init_metadata()
+        self.generate_metadata()
     
-    def init_metadata(self):
+    def generate_metadata(self):
         self.total_distance = 0
         self.distances = [0]
         num_points = len(self.points)
@@ -141,7 +141,7 @@ class RouteReader():
         for i in range(1, num_points + 1):
             if distance < self.distances[i]:
                 sub_ratio = (distance - self.distances[i-1]) / (self.distances[i] - self.distances[i-1])
-                return interpolate_points(self.points[i-1], self.points[i % num_points], ratio)
+                return interpolate_points(self.points[i-1], self.points[i % num_points], sub_ratio)
     
     def get_interpolated_point_3d(self, ratio):
         point = self.get_interpolated_point_2d(ratio)
@@ -171,6 +171,42 @@ class RouteReader():
         height = heightmap_value * self.vert_scale / HEIGHTMAP_RANGE
         return height
 
+    def flatten_heightmap_around_path(self, path_width=5, smoothening=10, divisions=1000):
+        heights = []
+        for i in range(divisions):
+            point = self.get_interpolated_point_3d(i / divisions)
+            heights.append(point[2])
+        rolling_sum = 0
+        for i in range(-smoothening, smoothening+1):
+            ratio = (smoothening % divisions) / divisions
+            point = self.get_interpolated_point_3d(ratio)
+            rolling_sum += point[2]
+        new_heights = [rolling_sum / (smoothening * 2 + 1)]
+        for i in range(1, divisions):
+            rolling_sum -= heights[(i - smoothening - 1) % divisions]
+            rolling_sum += heights[(i + smoothening) % divisions]
+            new_heights.append(rolling_sum / (smoothening * 2 + 1))
+        cols = self.heightmap.shape[0]
+        rows = self.heightmap.shape[1]
+        heightmap_modification_sums = numpy.zeros((cols, rows), dtype=numpy.float32)
+        heightmap_modification_counts = numpy.zeros((cols, rows), dtype=numpy.int32)
+        for i in range(divisions):
+            point = self.get_interpolated_point_2d(i / divisions)
+            x_int = round(point[0])
+            y_int = round(point[1])
+            height = new_heights[i]
+            for j in range(path_width):
+                for k in range(path_width):
+                    x = x_int - path_width//2 + j
+                    y = y_int - path_width//2 + k
+                    heightmap_modification_sums[x, y] += height
+                    heightmap_modification_counts[x, y] += 1
+        for i in range(cols):
+            for j in range(rows):
+                if heightmap_modification_counts[i, j] > 0:
+                    self.heightmap[cols - j - 1][i] = int(heightmap_modification_sums[i, j] / heightmap_modification_counts[i, j] / self.vert_scale * HEIGHTMAP_RANGE)
+                    
+        return
 
     
         

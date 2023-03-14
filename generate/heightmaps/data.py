@@ -19,12 +19,12 @@ def value_or_zero(value):
 
 
 
-def generate_hilly_terrain(height, width, variance=0, corners=(MID_DEPTH, MID_DEPTH, MID_DEPTH, MID_DEPTH)):
-    data = np.zeros((height, width), dtype=np.uint16)
+def generate_hilly_terrain(width, height, variance=0, corners=(MID_DEPTH, MID_DEPTH, MID_DEPTH, MID_DEPTH)):
+    data = np.zeros((width, height), dtype=np.uint16)
     data[0][0] = corners[0]
-    data[0][width-1] = corners[1]
-    data[height-1][0] = corners[2]
-    data[height-1][width-1] = corners[3]
+    data[0][height-1] = corners[1]
+    data[width-1][0] = corners[2]
+    data[width-1][height-1] = corners[3]
 
     step_size = width - 1
     while step_size > 1:
@@ -32,23 +32,22 @@ def generate_hilly_terrain(height, width, variance=0, corners=(MID_DEPTH, MID_DE
         # Horizontal
         for y in range(0, height, step_size):
             for x in range(0, width - 1, step_size):
-                # Horizontal
                 x_mid = x + half_step
-                avg = (int(data[y][x]) + int(data[y][x + step_size])) // 2
-                data[y][x_mid] = value_or_zero(avg + np.random.randint(-variance, variance))
+                avg = (int(data[x][y]) + int(data[x + step_size][y])) // 2
+                data[x_mid][y] = value_or_zero(avg + np.random.randint(-variance, variance))
         # Vertical
         for y in range(0, height - 1, step_size):
             for x in range(0, width, step_size):
                 y_mid = y + half_step
-                avg = (int(data[y][x]) + int(data[y + step_size][x])) // 2
-                data[y_mid][x] = value_or_zero(avg + np.random.randint(-variance, variance))
+                avg = (int(data[x][y]) + int(data[x][y + step_size])) // 2
+                data[x][y_mid] = value_or_zero(avg + np.random.randint(-variance, variance))
         # Center
         for y in range(0, height - 1, step_size):
             for x in range(0, width - 1, step_size):
                 x_mid = x + half_step
                 y_mid = y + half_step
-                avg = (int(data[y_mid][x]) + int(data[y_mid][x + step_size]) + int(data[y][x_mid]) + int(data[y + step_size][x_mid])) // 4
-                data[y_mid][x_mid] = value_or_zero(avg + np.random.randint(-variance, variance))
+                avg = (int(data[x][y_mid]) + int(data[x + step_size][y_mid]) + int(data[x_mid][y]) + int(data[x_mid][y + step_size])) // 4
+                data[x_mid][y_mid] = value_or_zero(avg + np.random.randint(-variance, variance))
  
         step_size //= 2
         variance //= 2

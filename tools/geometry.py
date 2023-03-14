@@ -24,9 +24,11 @@ def get_diff_3d(point1, point2):
 
 def get_height_rounded(heightmap, point):
     x, y = point
-    x_int = round(x+0.5)
-    y_int = round(y+0.5)
-    return heightmap[y_int][x_int]
+    x_int = round(x)
+    y_int = round(y)
+    width = heightmap.shape[0]
+    height = heightmap.shape[1]
+    return heightmap[height - 1 - y_int, x_int]
 
 
 

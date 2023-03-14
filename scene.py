@@ -72,7 +72,7 @@ class MyApp(ShowBase):
         # Disable the camera trackball controls.
         self.disableMouse()
 
-        self.load_map('route1')
+        self.load_map('map1')
 
         dlight = DirectionalLight('dlight')
         dlight.setColor((0.8, 0.8, 0.5, 1))
@@ -126,18 +126,6 @@ class MyApp(ShowBase):
 
     def follow_route_task(self, task):
         ratio = (task.time % LOOP_TIME_SECONDS) / LOOP_TIME_SECONDS
-        # step_int = int(step)
-        # step_frac = step - step_int
-        # last_point = self.route_points[step_int]
-        # next_point = self.route_points[(step_int + 1) % len(self.route_points)]
-        # current_point = interpolate_point(last_point, next_point, step_frac)
-        # current_point_height = self.vert_scale*self.terrain.getElevation(current_point[0], current_point[1])
-
-        # old_point_last = self.route_points[(step_int - CAMERA_OLD_POINT) % len(self.route_points)]
-        # old_point_next = self.route_points[(step_int - CAMERA_OLD_POINT + 1) % len(self.route_points)]
-        # old_point = interpolate_point(old_point_last, old_point_next, step_frac)
-        # camera_horizontal_displacement = diff_normalized(old_point, next_point, scale=CAMERA_HORIZONTAL_DISTANCE)
-        # focus_point = Point3(current_point[0], current_point[1], current_point_height)
         point, direction, slope = self.route_reader.get_interpolated_point_info(ratio)
         time_delta = task.time - self.last_time
         self.last_time = task.time

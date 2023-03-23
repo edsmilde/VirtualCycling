@@ -45,7 +45,7 @@ def create_map(name, side_length, iterations=4):
     route_reader.flatten_heightmap_around_path()
     # heightmap = route_reader.heightmap
     write_heightmap_png(f'{HEIGHTMAPS_PATH}/{name}.png', heightmap)
-    write_route_png(f'{TEXTURES_PATH}/{name}.png', route, side_length, resolution=20)
+    write_route_png(f'{TEXTURES_PATH}/{name}.png', route, side_length, resolution=50)
 
 
     numpy.savetxt(f'{HEIGHTMAPS_PATH}/{name}.txt', heightmap, fmt='%d')

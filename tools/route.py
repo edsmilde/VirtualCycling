@@ -167,7 +167,7 @@ class RouteReader():
                 return (point_3d, direction, slope)
 
     def get_height(self, point):
-        heightmap_value = get_height_rounded(self.heightmap, point)
+        heightmap_value = get_height_interpolated(self.heightmap, point)
         height = heightmap_value * self.vert_scale / HEIGHTMAP_RANGE
         return height
 
